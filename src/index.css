@@ -14,6 +14,15 @@
 	& > section {
 		width: 100%;
 	}
+
+	&.flex-end {
+		align-items: flex-end;
+	}
+
+	/* form flex */
+	.form-field {
+		margin-bottom: 0.25em;
+	}
 }
 
 .flex-column {

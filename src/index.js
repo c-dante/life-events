@@ -1,5 +1,6 @@
 import './index.css';
 
+import fp from 'lodash/fp';
 import { render, Component, linkEvent } from 'inferno';
 import { h } from 'inferno-hyperscript';
 
@@ -9,44 +10,67 @@ const dataSetRegistry = {};
 // Name -> Field
 const fieldRegistry = {};
 
+// Helper to set a path
+const updatePath = (path) => (ctrl, evt) => ctrl.setState(fp.set(path, evt.target.value, {}));
+
 class Field extends Component {
 	render() {
 		return h('.field', `Hi I'm a field`);
 	}
 };
 
+const canAddField = (field) => field.name && field.type && !fieldRegistry[field.name];
 
-const AddField  = ({
-	dataSetName,
-	newFieldName, newFieldValue, newFieldType,
-	// dataSetRegistry // @todo: don't close over
-} = {}) => h('.add-field.flex-row', [
-	// Name -- Whatever you want
-	h('.form-field', [
-		h('label', { for: 'add-field-name' }, 'New Field Name'),
-		h('input#add-field-name', {
-			value: newFieldName,
-		}),
-	]),
+class AddField extends Component {
+	constructor(props) {
+		super(props);
 
-	// Type -- Search for existing types to extend
-	h('.form-field', [
-		h('label', { for: 'add-field-value' }, 'Value'),
-		h('input#add-field-type', {
-			value: newFieldValue,
-		}),
-	]),
+		this.state = { ...props };
+	}
 
-	// Type -- Optional, override but derived from input
-	// @todo: write derive fn based on value + pristine
-	h('.form-field', [
-		h('label', { for: 'add-field-type' }, 'Type'),
-		h('input#add-field-type', {
-			value: newFieldType,
-		}),
-	]),
-	h('button', {}, 'Add Field'),
-]);
+	render({
+		dataSetName,
+	}, {
+		name, value, type // from state
+	} = {}) {
+		console.debug({ name, value, type });
+		return h('.add-field.flex-row.flex-end', [
+			// Name -- Whatever you want
+			h('.form-field', [
+				h('label', { for: 'add-field-name' }, 'New Field Name'),
+				h('input#add-field-name', {
+					value: name,
+					onInput: linkEvent(this, updatePath(['name'])),
+				}),
+			]),
+
+			// Type -- Search for existing types to extend
+			h('.form-field', [
+				h('label', { for: 'add-field-value' }, 'Value'),
+				h('input#add-field-value', {
+					value,
+					onInput: linkEvent(this, updatePath(['value'])),
+				}),
+			]),
+
+			// Type -- Optional, override but derived from input
+			// @todo: write derive fn based on value + pristine
+			h('.form-field', [
+				h('label', { for: 'add-field-type' }, 'Type'),
+				h('input#add-field-type', {
+					value: type,
+					onInput: linkEvent(this, updatePath(['type'])),
+				}),
+			]),
+
+			h('.form-field', [
+				h('button', {
+					disabled: !canAddField({ name, value, type, dataSetName }),
+				}, 'Add Field'),
+			]),
+		]);
+	}
+};
 
 
 // --------------- Data Entry -------------------- //
@@ -54,6 +78,10 @@ const changeDataSet = (ctrl, event) => {
 	ctrl.setState({
 		dataSetName: event.target.value,
 	});
+};
+
+const canSubmitRecord = (state) => {
+	return !!state.dataSetName; // Try.failure('Requires data set name.');
 };
 
 class DataEntry extends Component {
@@ -87,10 +115,12 @@ class DataEntry extends Component {
 						...fields.map(field => h(Field, field)),
 					]),
 
-					h('button', {}, 'Add Record'),
-
 					// Add field
 					h(AddField, { dataSetName }),
+
+					h('button', {
+						disabled: !canSubmitRecord(this.state),
+					}, 'Add Record'),
 				]),
 			]),
 		]);
@@ -104,6 +134,11 @@ const AdminTools = () => h('section.admin-tools', [
 ]);
 
 
+
+
+
+
+// ------------------------ Compose it all together //
 const App = () => h('section.life-tracker', [
 	h('h1', ['Life Tracker']),
 	h('.flex-row', [
