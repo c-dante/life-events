@@ -62,7 +62,7 @@ const buildPlugins = [
 
 	// Build the app
 	new HtmlWebpackPlugin({
-		title: 'Development Title',
+		title: 'Life Tracker',
 		chunksSortMode: 'dependency',
 		excludeChunks: [],
 		meta: {

@@ -1,6 +1,2 @@
-# web
-Fresh start at a web base
-
-# features
-* webpack v4 script to build assets.
-
+# life-tracker
+Data entry is hard. Maybe making a form can be more seamless?

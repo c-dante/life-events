@@ -1,7 +1,7 @@
 {
-  "name": "web",
+  "name": "life-tracker",
   "version": "0.0.0",
-  "description": "Fresh start at a web base",
+  "description": "Data entry form builder for tracking life.",
   "main": "none",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -10,18 +10,20 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/c-dante/web.git"
+    "url": "git+https://github.com/c-dante/life-tracker.git"
   },
   "author": "Dante <c.dante.federici@gmail.com> (http://dante.codes/)",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/c-dante/web/issues"
+    "url": "https://github.com/c-dante/life-tracker/issues"
   },
-  "homepage": "https://github.com/c-dante/web#readme",
+  "homepage": "https://github.com/c-dante/life-tracker#readme",
   "sideEffects": [
     "**/*.css"
   ],
   "dependencies": {
+    "inferno": "^7.1.9",
+    "inferno-hyperscript": "^7.1.9",
     "lodash": "^4.17.11"
   },
   "devDependencies": {
