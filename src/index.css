@@ -1,16 +1,26 @@
-/*	 Import: https://github.com/postcss/postcss-import */
-@import "./import.css";
+.form-field {
+	display: flex;
+	flex-direction: column;
+}
 
-/* Nesting: https://github.com/postcss/postcss-nested */
-.outer {
-	color: blue;
+.flex-row {
+	display: flex;
+	flex-direction: row;
 
-	.inner {
-		color: red;
-	}
+	/* Defaults */
+	align-items: flex-start;
+	justify-content: space-between;
 
-	.sibling {
-		color: green;
+	& > section {
+		width: 100%;
 	}
 }
 
+.flex-column {
+	display: flex;
+	flex-direction: column;
+
+	& > section {
+		height: 100%;
+	}
+}

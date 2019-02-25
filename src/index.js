@@ -1,54 +1,115 @@
-// Simple log -- we got here :0
-console.log('source file');
-
-
-// Demo some modern js features to test babel
-const test = {
-	...{ a: 19, b: 29 },
-	c: 19
-};
-
-Promise.resolve(test).then(x => console.log(x));
-
-for (let i in [1, 2, 3, 4, 5]) {
-	console.log(i);
-}
-
-for (let i of ['a', 'b', 'c']) {
-	console.log(i);
-}
-
-class TestClass {
-	name = 'Public Name';
-
-	#privateAge = 25;
-
-	get [Symbol.toStringTag]() {
-		return `TestClass(name=${this.name},privateAge=${this.#privateAge})`;
-	}
-
-}
-let x = new TestClass();
-console.log(x, x.name, x.privateAge, `${x}`);
-
-
-// Lodash to demo code splitting + libs
-import fp from 'lodash/fp';
-fp.flow(
-	fp.groupBy(x => x % 2 ? 'even' : 'odd'),
-	fp.tap(x => console.log('Even/Odd: ', x)),
-	fp.mapValues(fp.reduce((a, b) => a + b, 0)),
-	fp.tap(x => console.log('Sums: ', x))
-)([1, 2, 3, 4, 5]);
-
-
-// Templates with pug
-import pugTpl from './test.tpl.pug';
-const elt = document.createElement('div');
-elt.innerHTML = pugTpl();
-document.body.appendChild(elt);
-
-
-// CSS, which should get injected as a style or extracted with min in prod
 import './index.css';
 
+import { render, Component, linkEvent } from 'inferno';
+import { h } from 'inferno-hyperscript';
+
+// Name -> Dataset
+const dataSetRegistry = {};
+
+// Name -> Field
+const fieldRegistry = {};
+
+class Field extends Component {
+	render() {
+		return h('.field', `Hi I'm a field`);
+	}
+};
+
+
+const AddField  = ({
+	dataSetName,
+	newFieldName, newFieldValue, newFieldType,
+	// dataSetRegistry // @todo: don't close over
+} = {}) => h('.add-field.flex-row', [
+	// Name -- Whatever you want
+	h('.form-field', [
+		h('label', { for: 'add-field-name' }, 'New Field Name'),
+		h('input#add-field-name', {
+			value: newFieldName,
+		}),
+	]),
+
+	// Type -- Search for existing types to extend
+	h('.form-field', [
+		h('label', { for: 'add-field-value' }, 'Value'),
+		h('input#add-field-type', {
+			value: newFieldValue,
+		}),
+	]),
+
+	// Type -- Optional, override but derived from input
+	// @todo: write derive fn based on value + pristine
+	h('.form-field', [
+		h('label', { for: 'add-field-type' }, 'Type'),
+		h('input#add-field-type', {
+			value: newFieldType,
+		}),
+	]),
+	h('button', {}, 'Add Field'),
+]);
+
+
+// --------------- Data Entry -------------------- //
+const changeDataSet = (ctrl, event) => {
+	ctrl.setState({
+		dataSetName: event.target.value,
+	});
+};
+
+class DataEntry extends Component {
+	constructor(props){
+		super(props);
+		this.state = {};
+	}
+
+	render() {
+		const {
+			dataSetName,
+			fields = [],
+		} = this.state;
+
+		console.log(this.state);
+
+		return h('section.data-entry', [
+			h('.data-set', [
+				h('h3', 'New Record'),
+				h('.flex-column', [
+					// @todo: autocomplete from dataSetRegistry
+					h('.form-field', [
+						h('label', { for: 'data-set-name' }, 'Dataset Name'),
+						h('input#data-set-name', {
+							value: dataSetName,
+							onInput: linkEvent(this, changeDataSet),
+						}),
+					]),
+
+					h('section.fields', [
+						...fields.map(field => h(Field, field)),
+					]),
+
+					h('button', {}, 'Add Record'),
+
+					// Add field
+					h(AddField, { dataSetName }),
+				]),
+			]),
+		]);
+	}
+};
+
+
+// --------------------- ADMIN TOOLS --------------- //
+const AdminTools = () => h('section.admin-tools', [
+	h('h3', ['Admin Tools']),
+]);
+
+
+const App = () => h('section.life-tracker', [
+	h('h1', ['Life Tracker']),
+	h('.flex-row', [
+		h(DataEntry),
+		h(AdminTools),
+	]),
+]);
+
+render(h(App), document.body);
