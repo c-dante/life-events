@@ -1,14 +1,20 @@
-import './index.css';
-
 import fp from 'lodash/fp';
 import { render, Component, linkEvent } from 'inferno';
 import { h } from 'inferno-hyperscript';
+import cuid from 'cuid';
+
+import './index.css';
 
 // Name -> Dataset
+const dataSets = [];
 const dataSetRegistry = {};
 
 // Name -> Field
+const fields = [];
 const fieldRegistry = {};
+
+// Id -> Dataset
+const dataSetToRecords = {};
 
 // Helper to set a path
 const updatePath = (path) => (ctrl, evt) => ctrl.setState(fp.set(path, evt.target.value, {}));
@@ -20,6 +26,23 @@ class Field extends Component {
 };
 
 const canAddField = (field) => field.name && field.type && !fieldRegistry[field.name];
+
+const addField = (ctrl, evt) => {
+	const field = fp.pick(['name', 'value', 'type'], ctrl.state);
+	field.id = cuid();
+	fields.push(field);
+	fieldRegistry[field.name] = field;
+};
+
+// -------------------- General Cimponent ----------------- //
+const TextInput = ({
+	id = `anon-text-${cuid()}`,
+	label,
+	...inputArgs,
+} = {}) => h('.form-field', [
+	label ? h('label', { for: 'add-field-name' }, 'New Field Name') : undefined,
+	h('input', { id, type: 'text', ...inputArgs }),
+]);
 
 class AddField extends Component {
 	constructor(props) {
@@ -33,7 +56,8 @@ class AddField extends Component {
 	}, {
 		name, value, type // from state
 	} = {}) {
-		console.debug({ name, value, type });
+		const field = { name, value, type };
+		console.debug('addfield', { name, value, type });
 		return h('.add-field.flex-row.flex-end', [
 			// Name -- Whatever you want
 			h('.form-field', [
@@ -65,7 +89,8 @@ class AddField extends Component {
 
 			h('.form-field', [
 				h('button', {
-					disabled: !canAddField({ name, value, type, dataSetName }),
+					disabled: !canAddField(field),
+					onClick: linkEvent(this, addField),
 				}, 'Add Field'),
 			]),
 		]);
@@ -96,7 +121,7 @@ class DataEntry extends Component {
 			fields = [],
 		} = this.state;
 
-		console.log(this.state);
+		console.log('data entry', this.state);
 
 		return h('section.data-entry', [
 			h('.data-set', [
@@ -128,9 +153,32 @@ class DataEntry extends Component {
 };
 
 
+// --------------------- Simple Event -- phase 1 --------------- //
+const SimpleEvent = ({}, state) => h('section.simple-event', [
+	h('h3', 'Record Event'),
+	h('.flex-row', [
+		TextInput({
+			label: 'event',
+		}),
+		h('button', {
+		}, 'Add Record'),
+	])
+]);
+
+
 // --------------------- ADMIN TOOLS --------------- //
 const AdminTools = () => h('section.admin-tools', [
 	h('h3', ['Admin Tools']),
+	h('section.data-sets', [
+		h('h4', 'Data Sets'),
+		...dataSets.map(x => x.name),
+		!dataSets.length ? 'No data sets' : undefined,
+	]),
+	h('section.fields-sets', [
+		h('h4', 'Fields'),
+		...fields.map(x => x.name),
+		!fields.length ? 'No fields' : undefined,
+	]),
 ]);
 
 
@@ -142,7 +190,8 @@ const AdminTools = () => h('section.admin-tools', [
 const App = () => h('section.life-tracker', [
 	h('h1', ['Life Tracker']),
 	h('.flex-row', [
-		h(DataEntry),
+		// h(DataEntry),
+		h(SimpleEvent),
 		h(AdminTools),
 	]),
 ]);
