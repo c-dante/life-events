@@ -2,7 +2,7 @@ import fp from 'lodash/fp';
 import { render, Component, linkEvent, createRef } from 'inferno';
 import { h } from 'inferno-hyperscript';
 import { Provider, connect } from 'inferno-redux';
-import { createStore } from 'redux';
+import { createStore, applyMiddleware } from 'redux';
 import cuid from 'cuid';
 
 import './index.css';
@@ -26,7 +26,28 @@ const reducer = (state = defaultState, action) => {
 	}
 };
 
-const store = createStore(reducer);
+
+const PERSIST_KEY = 'life-tracker-storage';
+const initialState = (() => {
+	const persist = window.localStorage.getItem(PERSIST_KEY);
+	if (persist) {
+		return JSON.parse(persist);
+	}
+	return undefined;
+})();
+let shouldSave = false;
+const store = createStore(reducer, initialState, applyMiddleware(
+	() => next => action => {
+		shouldSave = true;
+		return next(action);
+	})
+);
+setInterval(() => {
+	if (shouldSave) {
+		window.localStorage.setItem(PERSIST_KEY, JSON.stringify(store.getState()));
+		console.info('Saved state.');
+	}
+}, 15 * 1000);
 
 // -------------- Presentation ---------------- //
 // Helper to set a path
@@ -46,6 +67,21 @@ const TextInput = ({
 ]);
 
 
+// @todo: if I wanna add a chart this is the pattern to get the div
+class DivAccess extends Component {
+	constructor(props) {
+		super(props);
+		this.divRef = createRef();
+	}
+
+	componentDidMount() {
+		console.log(this.divRef);
+	}
+
+	render(props) {
+		return h('div', { ...props, ref: this.divRef });
+	}
+}
 
 
 // --------------------- Simple Event -- phase 1 --------------- //
