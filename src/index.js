@@ -1,8 +1,9 @@
 import fp from 'lodash/fp';
-import { render, Component, linkEvent, createRef } from 'inferno';
-import { h } from 'inferno-hyperscript';
-import { Provider, connect } from 'inferno-redux';
 import { createStore, applyMiddleware } from 'redux';
+import { render, Component } from 'preact';
+import { createElement as h } from 'preact-hyperscript';
+import { Provider, connect } from 'preact-redux';
+import linkState from 'linkstate';
 import cuid from 'cuid';
 
 import './index.css';
@@ -11,6 +12,7 @@ import './index.css';
 const createAction = (type, payload) => ({ type, payload });
 const defaultState = {
 	events: [],
+	simpleEventInput: 'TEST',
 };
 const RECORD_EVENT = 'LifeTracker:RECORD_EVENT';
 const recordEvent = name => createAction(RECORD_EVENT, { name, at: Date.now() });
@@ -20,6 +22,9 @@ const downloadData = () => createAction(DOWNLOAD_DATA);
 
 const DELETE_DATA = 'LifeTracker:DELETE_DATA';
 const deleteData = () => createAction(DELETE_DATA);
+
+const SET_EVENT_TEXT = 'LifeTracker:SET_EVENT_TEXT';
+const setEventText = (text) => createAction(SET_EVENT_TEXT, text);
 
 const reducer = (state = defaultState, action) => {
 	switch (action.type) {
@@ -35,6 +40,12 @@ const reducer = (state = defaultState, action) => {
 				events: [],
 			};
 		}
+
+		case SET_EVENT_TEXT:
+			return {
+				...state,
+				simpleEventInput: action.payload,
+			};
 
 
 		default:
@@ -83,22 +94,18 @@ const store = createStore(reducer, initialState, applyMiddleware(
 			return next(action);
 		}
 
-		console.log(getState());
-		try {
-			const a = document.createElement('a');
-			const file = new Blob([JSON.stringify(getState().events)], { type: 'application/json' });
-			const url = URL.createObjectURL(file);
-			a.href = url;
-			a.download = 'life-tracker.json';
-			document.body.appendChild(a);
-			a.click();
-			setTimeout(() => {
-				document.body.removeChild(a);
-				URL.revokeObjectURL(url);
-			});
-		} catch (error) {
-			console.log('!!!', error);
-		}
+		// Just consume. Never call next on this one.
+		const a = document.createElement('a');
+		const file = new Blob([JSON.stringify(getState().events)], { type: 'application/json' });
+		const url = URL.createObjectURL(file);
+		a.href = url;
+		a.download = 'life-tracker.json';
+		document.body.appendChild(a);
+		a.click();
+		setTimeout(() => {
+			document.body.removeChild(a);
+			URL.revokeObjectURL(url);
+		});
 	})
 );
 setInterval(() => {
@@ -119,38 +126,31 @@ const TextInput = ({
 	id = `anon-text-${cuid()}`,
 	label,
 	...inputArgs,
-} = {}) => h('.form-field', [
+} = {}) => h('div.form-field', [
 	label ? h('label', { for: 'add-field-name' }, 'New Field Name') : undefined,
 	h('input', { id, type: 'text', ...inputArgs }),
 ]);
-
-
-// @todo: if I wanna add a chart this is the pattern to get the div
-class DivAccess extends Component {
-	constructor(props) {
-		super(props);
-		this.divRef = createRef();
-	}
-
-	componentDidMount() {
-		console.log(this.divRef);
-	}
-
-	render(props) {
-		return h('div', { ...props, ref: this.divRef });
-	}
-}
 
 
 // --------------------- Simple Event -- phase 1 --------------- //
 class SimpleEvent extends Component {
 	constructor(props){
 		super(props);
-		this.state = {};
+		this.state = {
+			event: props.event,
+		};
 	}
 
 	canSubmitEvent({ event } = {}) {
 		return !!event;
+	}
+
+	componentWillReceiveProps(nextProps, nextState) {
+		if (nextProps.event !== this.state.event) {
+			this.setState({
+				event: nextProps.event,
+			});
+		}
 	}
 
 	render({ addEvent } = {}) {
@@ -160,11 +160,11 @@ class SimpleEvent extends Component {
 
 		return h('section.simple-event', [
 			h('h3', 'Record Event'),
-			h('.flex-row', [
+			h('div.flex-row', [
 				TextInput({
 					label: 'event',
 					value: event,
-					onInput: linkEvent(this, updatePath(['event'])),
+					onInput: linkState(this, 'event'),
 				}),
 				h('button', {
 					disabled: !this.canSubmitEvent(this.state),
@@ -177,7 +177,11 @@ class SimpleEvent extends Component {
 
 // And now feed the SimpleEvent form the redux container
 const LinkedSimpleEvent = connect(
-	() => ({}),
+	({
+		simpleEventInput,
+	}) => ({
+		event: simpleEventInput,
+	}),
 	(dispatch) => ({
 		addEvent: (evt) => dispatch(recordEvent(evt)),
 	}),
@@ -193,6 +197,7 @@ const AdminTools = ({
 	eventsByHour, // { hour: 0-23, data: { label: String, count: Number }[] }[]
 	downloadData, // () => {}, callback to fire
 	deleteData, // () => {}, callback to fire
+	setEventText, // (name: String) => {}
 }) => h('section.admin-tools', [
 	h('h3', ['Admin Tools']),
 	h('section.data-sets', [
@@ -204,7 +209,12 @@ const AdminTools = ({
 		h('h4', 'Events'),
 		h('ul', [
 			...eventsBarData.map(pt => h('li', [
-				`${pt.label}: ${pt.count}`
+				h('a.btn', {
+					onClick: () => setEventText(pt.label),
+				}, [
+					pt.label,
+				]),
+				`: ${pt.count}`
 			])),
 		]),
 		h('h4', 'Grouped By Hour'),
@@ -218,7 +228,7 @@ const AdminTools = ({
 				])
 			])),
 		]),
-		h('.danger-zone', [
+		h('div.danger-zone', [
 			h('h4', 'Danger Zone'),
 			h('button.danger', {
 				onClick: deleteData,
@@ -254,21 +264,21 @@ const LinkedAdminTools = connect(
 			fp.map(pair => ({ hour: pair[0], data: pair[1] })),
 		)(state.events),
 	}),
-	{
-		downloadData,
-		deleteData,
-	}
+	(dispatch) => {
+		return {
+			setEventText: (...args) => dispatch(setEventText(...args)),
+			downloadData: (...args) => dispatch(downloadData(...args)),
+			deleteData: (...args) => dispatch(deleteData(...args)),
+		};
+	},
 )(AdminTools);
-
-
-
 
 
 
 // ------------------------ Compose it all together //
 const App = () => h('section.life-tracker', [
 	h('h1', ['Life Tracker']),
-	h('.flex-row', [
+	h('div.flex-row', [
 		h(LinkedSimpleEvent),
 		h(LinkedAdminTools),
 	]),

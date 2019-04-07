@@ -23,10 +23,11 @@
   ],
   "dependencies": {
     "cuid": "^2.1.6",
-    "inferno": "^7.1.9",
-    "inferno-hyperscript": "^7.1.9",
-    "inferno-redux": "^7.1.11",
+    "linkstate": "^1.1.1",
     "lodash": "^4.17.11",
+    "preact": "^8.4.2",
+    "preact-hyperscript": "^0.7.1",
+    "preact-redux": "^2.0.3",
     "redux": "^4.0.1"
   },
   "devDependencies": {

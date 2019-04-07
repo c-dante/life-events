@@ -33,3 +33,12 @@
 		height: 100%;
 	}
 }
+
+a.btn {
+	cursor: pointer;
+	text-decoration: underline;
+
+	&:hover {
+		color: grey;
+	}
+}
