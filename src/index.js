@@ -1,5 +1,6 @@
 import fp from 'lodash/fp';
 import { createStore, applyMiddleware } from 'redux';
+import { createLogger } from 'redux-logger'
 import { render, Component } from 'preact';
 import { createElement as h } from 'preact-hyperscript';
 import { Provider, connect } from 'preact-redux';
@@ -47,7 +48,6 @@ const reducer = (state = defaultState, action) => {
 				simpleEventInput: action.payload,
 			};
 
-
 		default:
 			console.log('Unhandled', action);
 			return state;
@@ -69,25 +69,9 @@ const store = createStore(reducer, initialState, applyMiddleware(
 		shouldSave = true;
 		return next(action);
 	},
-	// @todo: redux-logger
-	({ getState }) => next => action => {
-		const before = getState();
-		let res;
-		let isError = false;
-		try {
-			res = next(action);
-		} catch (error) {
-			res = error;
-			isError = true;
-		}
-		const after = getState();
-		console.groupCollapsed(`[${isError ? 'ERROR' : 'EVENT'} ${new Date().toISOString()}] ${action.type}`);
-		console.log(before);
-		console.log(action);
-		console.log(after);
-		console.groupEnd();
-		return res;
-	},
+	createLogger({
+		collapsed: true,
+	}),
 	// DOWNLOAD
 	({ getState }) => next => action => {
 		if (action.type !== DOWNLOAD_DATA) {
