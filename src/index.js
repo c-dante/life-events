@@ -13,7 +13,7 @@ import './index.css';
 const createAction = (type, payload) => ({ type, payload });
 const defaultState = {
 	events: [],
-	simpleEventInput: 'TEST',
+	simpleEventInput: '',
 };
 const RECORD_EVENT = 'LifeTracker:RECORD_EVENT';
 const recordEvent = name => createAction(RECORD_EVENT, { name, at: Date.now() });
@@ -49,7 +49,7 @@ const reducer = (state = defaultState, action) => {
 			};
 
 		default:
-			console.log('Unhandled', action);
+			console.log('Unhandled', { action, state });
 			return state;
 	}
 };
@@ -94,7 +94,11 @@ const store = createStore(reducer, initialState, applyMiddleware(
 );
 setInterval(() => {
 	if (shouldSave) {
-		window.localStorage.setItem(PERSIST_KEY, JSON.stringify(store.getState()));
+		const whitelistPaths = [
+			'events',
+		];
+		const toSave = fp.pick(whitelistPaths, store.getState());
+		window.localStorage.setItem(PERSIST_KEY, JSON.stringify(toSave));
 	}
 }, 15 * 1000);
 
@@ -111,7 +115,7 @@ const TextInput = ({
 	label,
 	...inputArgs,
 } = {}) => h('div.form-field', [
-	label ? h('label', { for: 'add-field-name' }, 'New Field Name') : undefined,
+	label ? h('label', { for: id }, 'New Field Name') : undefined,
 	h('input', { id, type: 'text', ...inputArgs }),
 ]);
 
@@ -173,6 +177,32 @@ const LinkedSimpleEvent = connect(
 
 
 
+// ----------- Event List --------------- //
+import { FixedSizeList as List } from 'react-window';
+// Hack to support numeric style props that should be pixels
+const pxKeys = new Set([
+	'top', 'bottom', 'left', 'right', 'width', 'height'
+]);
+const mapPxStyles = fp.mapValues.convert({ cap: false })((val, key) => {
+	return pxKeys.has(key) && fp.isNumber(val) ? `${val}px` : val;
+});
+const Row = ({ index, style }) => h('div', { style: mapPxStyles(style) }, 'Test');
+const EventList = ({ events }) => h('div.events', [
+	h('h3', ['Events']),
+	h(List, {
+		height: 200,
+		itemCount: events.length,
+		itemSize: 24,
+		width: 200,
+	}, [
+		Row,
+	])
+]);
+
+const LinkedEventList = connect(
+	({ events }) => ({ events }),
+)(EventList);
+
 
 
 // --------------------- ADMIN TOOLS --------------- //
@@ -190,7 +220,7 @@ const AdminTools = ({
 		}, [
 			'Download Data (json blob)'
 		]),
-		h('h4', 'Events'),
+		h('h4', 'Event Totals'),
 		h('ul', [
 			...eventsBarData.map(pt => h('li', [
 				h('a.btn', {
@@ -201,17 +231,18 @@ const AdminTools = ({
 				`: ${pt.count}`
 			])),
 		]),
-		h('h4', 'Grouped By Hour'),
-		h('ul', [
-			...eventsByHour.map(pt => h('li', [
-				`${pt.hour}:`,
-				h('ul', [
-					...pt.data.map(sub_pt => h('li', [
-						`${sub_pt.label}: ${sub_pt.count}`,
-					])),
-				])
-			])),
-		]),
+		// h('h4', 'Grouped By Hour'),
+		// h('ul', [
+		// 	...eventsByHour.map(pt => h('li', [
+		// 		`${pt.hour}:`,
+		// 		h('ul', [
+		// 			...pt.data.map(sub_pt => h('li', [
+		// 				`${sub_pt.label}: ${sub_pt.count}`,
+		// 			])),
+		// 		])
+		// 	])),
+		// ]),
+		h(LinkedEventList),
 		h('div.danger-zone', [
 			h('h4', 'Danger Zone'),
 			h('button.danger', {
@@ -220,7 +251,7 @@ const AdminTools = ({
 				'Delete Data',
 			]),
 		]),
-	]),
+	])
 ]);
 
 const countByProp = prop => fp.flow(
@@ -237,16 +268,16 @@ const LinkedAdminTools = connect(
 			fp.map(pair => ({ label: pair[0], count: pair[1] }))
 		)(state.events),
 
-		eventsByHour: fp.flow(
-			fp.groupBy(x => (new Date(x.at)).getHours()),
-			fp.mapValues(fp.flow(
-				countByProp('name'),
-				fp.map(pair => ({ label: pair[0], count: pair[1] }))
-			)),
-			fp.toPairs,
-			fp.sortBy(x => +x[0]),
-			fp.map(pair => ({ hour: pair[0], data: pair[1] })),
-		)(state.events),
+		// eventsByHour: fp.flow(
+		// 	fp.groupBy(x => (new Date(x.at)).getHours()),
+		// 	fp.mapValues(fp.flow(
+		// 		countByProp('name'),
+		// 		fp.map(pair => ({ label: pair[0], count: pair[1] }))
+		// 	)),
+		// 	fp.toPairs,
+		// 	fp.sortBy(x => +x[0]),
+		// 	fp.map(pair => ({ hour: pair[0], data: pair[1] })),
+		// )(state.events),
 	}),
 	(dispatch) => {
 		return {
